@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: dcoffee
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: dcoffee
+    volumes: [dbdata:/var/lib/postgresql/data]
+  app:
+    build: ./server
+    restart: always
+    depends_on: [db]
+    environment:
+      DATABASE_URL: postgres://dcoffee:${DB_PASSWORD}@db:5432/dcoffee
+      JWT_SECRET: ${JWT_SECRET}
+      STAFF_PHONE: ${STAFF_PHONE}
+      STAFF_PASSWORD: ${STAFF_PASSWORD}
+      ADMIN_PHONE: ${ADMIN_PHONE}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      PAYMENT_MODE: ${PAYMENT_MODE:-live}
+      MIDTRANS_SERVER_KEY: ${MIDTRANS_SERVER_KEY:-}
+      MIDTRANS_PROD: ${MIDTRANS_PROD:-0}
+      BASE_URL: https://${DOMAIN}
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports: ["80:80","443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile","caddy_data:/data"]
+    depends_on: [app]
+volumes:
+  dbdata:
+  caddy_data:
