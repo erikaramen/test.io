@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>D Coffee - Kasir</title>
+<style>
+:root{--bg:#faf6f1;--card:#fff;--tx:#2b1d14;--mu:#7a6a5d;--ac:#8b4f2a;--bd:#e8ddd2}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1410;--card:#261d17;--tx:#f3e9df;--mu:#a8978a;--ac:#d9955e;--bd:#3a2e25}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px system-ui,sans-serif;padding:14px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}h1{font-size:20px;margin:0}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.col>h2{font-size:15px;margin:0 0 8px}.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px}
+button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--ac);color:#fff;cursor:pointer;width:100%;margin-top:8px}
+button.s{width:auto;background:var(--bd);color:var(--tx);margin:0}input{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--bd);width:100%;margin-bottom:8px;background:var(--bg);color:var(--tx)}
+.mu{color:var(--mu);font-size:13px}.box{max-width:340px;margin:12vh auto}
+</style></head><body><div id="app"></div>
+<script>
+let TK=localStorage.getItem('stk')||'',known=new Set(),first=true,timer;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(p,m,b){const r=await fetch(p,{method:m||'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+TK},body:b?JSON.stringify(b):undefined});
+ const j=await r.json().catch(()=>({}));if(r.status==401||r.status==403){logout();throw new Error(j.error)}if(!r.ok)throw new Error(j.error||'Gagal');return j}
+function loginUI(e){clearInterval(timer);document.getElementById('app').innerHTML=`<div class="box card"><h1>☕ Panel Kasir</h1><p class="mu">Masuk dengan akun staf</p>
+ <input id="p" placeholder="No. HP staf" inputmode="numeric"><input id="w" type="password" placeholder="Password">${e?`<p style="color:#c0392b">${esc(e)}</p>`:''}<button onclick="login()">Masuk</button></div>`}
+async function login(){try{const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:p.value,password:w.value})});
+ const j=await r.json();if(!r.ok)throw new Error(j.error);if(j.role=='customer')throw new Error('Bukan akun staf');TK=j.token;localStorage.setItem('stk',TK);start()}catch(e){loginUI(e.message)}}
+function logout(){TK='';localStorage.removeItem('stk');loginUI()}
+function beep(){try{const a=new AudioContext(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=880;o.start();setTimeout(()=>{o.stop();a.close()},350)}catch(e){}}
+const NEXT={baru:['dibuat','Mulai Buat'],dibuat:['siap','Tandai Siap'],siap:['selesai','Selesai / Diambil']};
+async function set(id,s){try{await api('/api/staff/orders/'+id,'PATCH',{status:s});load()}catch(e){alert(e.message)}}
+function card(o){const t=new Date(o.created_at).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+ return `<div class="card"><b>#${esc(o.code)}</b> · ${esc(o.name)}<div class="mu">${t} · ambil: ${esc(o.slot)} · ${esc(o.pay)}</div>
+ <div style="margin-top:6px">${o.items.map(i=>`<div><b>${i.q}×</b> ${esc(i.n)}<div class="mu">${esc(i.d||'')}</div></div>`).join('')}</div>
+ <button onclick="set(${o.id},'${NEXT[o.status][0]}')">${NEXT[o.status][1]}</button></div>`}
+async function load(){try{const os=await api('/api/staff/orders');
+ if(!first&&os.some(o=>o.status=='baru'&&!known.has(o.id)))beep();os.forEach(o=>known.add(o.id));first=false;
+ const col=(s,t)=>`<div class="col"><h2>${t} (${os.filter(o=>o.status==s).length})</h2>${os.filter(o=>o.status==s).map(card).join('')||'<div class="mu">—</div>'}</div>`;
+ document.getElementById('app').innerHTML=`<div class="top"><h1>☕ Pesanan Masuk</h1><button class="s" onclick="logout()">Keluar</button></div><div class="cols">${col('baru','🆕 Baru')}${col('dibuat','🔧 Sedang Dibuat')}${col('siap','✅ Siap Diambil')}</div>`}catch(e){}}
+function start(){first=true;load();clearInterval(timer);timer=setInterval(load,5000)}
+TK?start():loginUI();
+</script></body></html>

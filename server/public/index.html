@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>D Coffee Shop</title>
+<link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#8b4f2a"><link rel="icon" href="/icons/icon-192.png"><link rel="apple-touch-icon" href="/icons/icon-192.png">
+<style>
+:root{--bg:#faf6f1;--card:#fff;--tx:#2b1d14;--mu:#7a6a5d;--ac:#8b4f2a;--ac2:#f0e0d0;--bd:#e8ddd2;--ok:#2e8b57;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1410;--card:#261d17;--tx:#f3e9df;--mu:#a8978a;--ac:#d9955e;--ac2:#3a2b20;--bd:#3a2e25;--ok:#5cc08a}}
+:root[data-theme="dark"]{--bg:#1a1410;--card:#261d17;--tx:#f3e9df;--mu:#a8978a;--ac:#d9955e;--ac2:#3a2b20;--bd:#3a2e25;--ok:#5cc08a}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+#app{max-width:720px;margin:auto;padding:14px 14px 90px}
+h1{font-size:22px;margin:0}h2{font-size:17px;margin:18px 0 8px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:10px}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.mu{color:var(--mu);font-size:13px}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:9px 14px;background:var(--ac);color:#fff}
+button.s{background:var(--ac2);color:var(--tx)}button.on{background:var(--ac);color:#fff}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.chips button{background:var(--ac2);color:var(--tx);padding:6px 11px}
+.chips button.on{background:var(--ac);color:#fff}
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--bd);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px)}
+.nav div{display:flex;max-width:720px;width:100%}.nav button{flex:1;background:none;color:var(--mu);border-radius:0;padding:10px 2px;font-size:12px}
+.nav button.on{color:var(--ac);font-weight:700}
+.ban{background:linear-gradient(135deg,var(--ac),#c0773f);color:#fff;border-radius:14px;padding:14px;margin:10px 0}
+.em{font-size:30px;width:46px;text-align:center}
+input,select{font:inherit;padding:9px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);width:100%}
+.ov{position:fixed;inset:0;background:#0009;display:flex;align-items:flex-end;justify-content:center;z-index:9}
+.sh{background:var(--bg);width:100%;max-width:720px;max-height:88%;overflow:auto;border-radius:18px 18px 0 0;padding:16px}
+.bar{height:8px;border-radius:5px;background:var(--ac2);overflow:hidden}.bar i{display:block;height:100%;background:var(--ac)}
+.tag{display:inline-block;background:var(--ac2);border-radius:8px;padding:2px 8px;font-size:12px}
+.fab{position:fixed;right:14px;bottom:calc(70px + env(safe-area-inset-bottom,0px));box-shadow:0 4px 14px #0004;border-radius:30px;padding:12px 18px}
+</style></head><body>
+<div id="app"></div><div id="nav" class="nav"></div><div id="ov"></div>
+<script>
+const MENU=[
+{id:1,n:'Espresso',p:18000,e:'☕',c:'Kopi'},{id:2,n:'Americano',p:22000,e:'🧊',c:'Kopi'},
+{id:3,n:'Caffe Latte',p:28000,e:'🥛',c:'Kopi'},{id:4,n:'Cappuccino',p:28000,e:'☕',c:'Kopi'},
+{id:5,n:'Kopi Susu Gula Aren',p:25000,e:'🍯',c:'Kopi'},{id:6,n:'Mocha',p:32000,e:'🍫',c:'Kopi'},
+{id:7,n:'Matcha Latte',p:30000,e:'🍵',c:'Non-Kopi'},{id:8,n:'Es Teh Lemon',p:18000,e:'🍋',c:'Non-Kopi'},
+{id:9,n:'Croissant',p:20000,e:'🥐',c:'Makanan',f:1},{id:10,n:'Roti Bakar Coklat',p:22000,e:'🍞',c:'Makanan',f:1}];
+const STORES=[{n:'D Coffee - Pusat',a:'Jl. Contoh No. 1, Bandar Lampung',h:'07:00–22:00',w:1,s:1},
+{n:'D Coffee - Kampus',a:'Jl. Contoh No. 25, Bandar Lampung',h:'08:00–23:00',w:1,s:0},
+{n:'D Coffee - Mall',a:'Lantai 1 Mall Contoh, Bandar Lampung',h:'10:00–22:00',w:1,s:1}];
+const PAY=['Saldo D Coffee','QRIS','GoPay','OVO','ShopeePay','Dana','Kartu Kredit/Debit'];
+const TOPUP=[[50000,3000],[100000,10000],[200000,25000]];
+const rp=n=>'Rp'+Math.round(n).toLocaleString('id-ID');
+let S;try{S=JSON.parse(localStorage.getItem('dcs'))}catch(e){}
+S=S||{wallet:0,points:0,orders:[],cart:[],bday:'',gifts:[],sub:null,store:0};
+const save=()=>{try{localStorage.setItem('dcs',JSON.stringify(S))}catch(e){}};
+let tab='menu',cat='Semua',co={t:0,pay:0,v:'',pts:false};
+const hh=()=>{const h=new Date().getHours();return h>=14&&h<16};
+const SZ=[['S',0],['M',3000],['L',6000]],MK=[['Reguler',0],['Oat',8000],['Almond',7000]];
+function ostat(o){const s=(Date.now()-o.at)/1000;return s<15?0:s<40?1:2}
+const ST=['Diterima','Sedang Dibuat','Siap Diambil'];
+function setTab(t){tab=t;render()}
+function render(){
+ const A=document.getElementById('app');let h='';
+ if(tab=='menu')h=vMenu();else if(tab=='orders')h=vOrders();else if(tab=='wallet')h=vWallet();else h=vStores();
+ A.innerHTML=h;
+ const N=[['menu','☕','Menu'],['orders','🧾','Pesanan'],['wallet','💳','Dompet'],['stores','📍','Gerai']];
+ document.getElementById('nav').innerHTML='<div>'+N.map(x=>`<button class="${tab==x[0]?'on':''}" onclick="setTab('${x[0]}')">${x[1]}<br>${x[2]}</button>`).join('')+'</div>';
+ if(tab=='menu'&&S.cart.length){const q=S.cart.reduce((a,c)=>a+c.q,0);A.insertAdjacentHTML('beforeend',`<button class="fab" onclick="openCart()">🛒 ${q} item · ${rp(sub())}</button>`)}
+}
+function vMenu(){
+ const cats=['Semua',...new Set(MENU.map(m=>m.c))];
+ return `<div class="row"><h1>☕ D Coffee Shop</h1><button class="s" onclick="toggleTheme()">🌓</button></div>
+ <div class="ban"><b>${hh()?'🔥 Happy Hour AKTIF! Diskon 15% otomatis':'⏰ Happy Hour 14:00–16:00: diskon 15%'}</b><br><span style="opacity:.9;font-size:13px">Pesan dari aplikasi, ambil tanpa antre.</span></div>
+ ${S.orders.length?`<h2>Pesan Ulang Cepat</h2><div class="card row"><span>${S.orders[0].items.map(i=>i.q+'× '+i.n).join(', ')}</span><button onclick="reorder(0)">🔁 Pesan lagi</button></div>`:''}
+ <div class="chips">${cats.map(c=>`<button class="${c==cat?'on':''}" onclick="cat='${c}';render()">${c}</button>`).join('')}</div>
+ ${MENU.filter(m=>cat=='Semua'||m.c==cat).map(m=>`<div class="card row"><div class="em">${m.e}</div><div style="flex:1"><b>${m.n}</b><div class="mu">${rp(m.p)}</div></div><button onclick="openItem(${m.id})">Pilih</button></div>`).join('')}`}
+function toggleTheme(){const r=document.documentElement,d=getComputedStyle(r).getPropertyValue('--bg').trim()=='#1a1410';r.dataset.theme=d?'light':'dark'}
+let it=null;
+function openItem(id){const m=MENU.find(x=>x.id==id);it={m,sz:1,mk:0,sg:100,ice:'Normal',sh:0,q:1};drawItem()}
+function itPrice(){const{m,sz,mk,sh}=it;return m.f?m.p:m.p+SZ[sz][1]+MK[mk][1]+sh*5000}
+function chips(arr,key,fn){return `<div class="chips">${arr.map((x,i)=>`<button class="${it[key]==(fn?fn(x,i):i)?'on':''}" onclick="it.${key}=${JSON.stringify(fn?fn(x,i):i)};drawItem()">${Array.isArray(x)?x[0]+(x[1]?' +'+x[1]/1000+'rb':''):x}</button>`).join('')}</div>`}
+function drawItem(){const m=it.m;
+ sheet(`<h2 style="margin-top:0">${m.e} ${m.n}</h2>${m.f?'':`
+ <b>Ukuran</b>${chips(SZ,'sz')}<b>Jenis susu</b>${chips(MK,'mk')}
+ <b>Sugar level</b>${chips([0,25,50,75,100],'sg',x=>x).replace(/>(\d+)</g,'>$1%<')}
+ <b>Es</b>${chips(['Tanpa','Sedikit','Normal','Ekstra'],'ice',x=>x)}
+ <b>Extra shot (+5rb)</b>${chips([0,1,2],'sh',x=>x).replace(/>(\d)</g,'>$1 shot<')}`}
+ <div class="row" style="margin-top:8px"><div><button class="s" onclick="it.q=Math.max(1,it.q-1);drawItem()">−</button> <b style="margin:0 8px">${it.q}</b> <button class="s" onclick="it.q++;drawItem()">+</button></div>
+ <button onclick="addCart()">Tambah · ${rp(itPrice()*it.q)}</button></div>`)}
+function addCart(){const{m}=it;const d=m.f?'':`${SZ[it.sz][0]}, ${MK[it.mk][0]}, gula ${it.sg}%, es ${it.ice}${it.sh?', +'+it.sh+' shot':''}`;
+ S.cart.push({id:m.id,n:m.n,d,p:itPrice(),q:it.q,o:{sz:it.sz,mk:it.mk,sg:it.sg,ice:it.ice,sh:it.sh}});save();closeSheet();render()}
+function sheet(h){document.getElementById('ov').innerHTML=`<div class="ov" onclick="if(event.target==this)closeSheet()"><div class="sh">${h}</div></div>`}
+function closeSheet(){document.getElementById('ov').innerHTML=''}
+const sub=()=>S.cart.reduce((a,c)=>a+c.p*c.q,0);
+function calc(){const s=sub();let d=0,note=[];
+ if(hh()){d+=s*.15;note.push('Happy Hour 15%')}
+ const v=co.v.trim().toUpperCase();
+ if(v=='HEMAT10'){d+=s*.1;note.push('Voucher HEMAT10')}
+ else if(v=='ULTAH'){if(S.bday&&new Date(S.bday).getMonth()==new Date().getMonth()){d+=s*.25;note.push('Voucher Ulang Tahun 25%')}else note.push('ULTAH: hanya bulan ulang tahun Anda')}
+ else{const g=S.gifts.find(x=>x.code==v&&!x.used&&x.mine);if(g){d+=g.val;note.push('Voucher hadiah '+rp(g.val))}}
+ if(co.pts&&S.points>=50){d+=10000;note.push('Tukar 50 poin')}
+ d=Math.min(d,s);return{s,d,t:s-d,note}}
+function openCart(){
+ if(!S.cart.length){sheet('<p>Keranjang kosong</p>');return}
+ const c=calc();const slots=['Sekarang (±10 mnt)','15 menit lagi','30 menit lagi','1 jam lagi'];
+ sheet(`<h2 style="margin-top:0">🛒 Keranjang</h2>
+ ${S.cart.map((x,i)=>`<div class="card row"><div><b>${x.q}× ${x.n}</b><div class="mu">${x.d}</div></div><div>${rp(x.p*x.q)} <button class="s" onclick="S.cart.splice(${i},1);save();S.cart.length?openCart():closeSheet();render()">✕</button></div></div>`).join('')}
+ <b>Jadwal pengambilan</b><div class="chips">${slots.map((s,i)=>`<button class="${co.t==i?'on':''}" onclick="co.t=${i};openCart()">${s}</button>`).join('')}</div>
+ <b>Pembayaran</b><div class="chips">${PAY.map((s,i)=>`<button class="${co.pay==i?'on':''}" onclick="co.pay=${i};openCart()">${s}${i==0?' ('+rp(S.wallet)+')':''}</button>`).join('')}</div>
+ <input placeholder="Kode voucher (coba: HEMAT10)" value="${co.v}" onchange="co.v=this.value;openCart()">
+ <label class="mu"><input type="checkbox" style="width:auto" ${co.pts?'checked':''} ${S.points<50?'disabled':''} onchange="co.pts=this.checked;openCart()"> Tukar 50 poin = diskon Rp10.000 (poin Anda: ${S.points})</label>
+ <div class="card" style="margin-top:10px"><div class="row"><span>Subtotal</span><span>${rp(c.s)}</span></div>${c.d?`<div class="row" style="color:var(--ok)"><span>Diskon (${c.note.join(', ')})</span><span>−${rp(c.d)}</span></div>`:c.note.length?`<div class="mu">${c.note.join(', ')}</div>`:''}<div class="row"><b>Total</b><b>${rp(c.t)}</b></div></div>
+ <button style="width:100%" onclick="pay()">Bayar ${rp(c.t)}</button>
+ ${co.pay?'<p class="mu">Mode demo: pembayaran '+PAY[co.pay]+' disimulasikan. Hubungkan ke Midtrans/Xendit di server untuk transaksi asli.</p>':''}`)}
+function pay(){const c=calc();
+ if(co.pay==0){if(S.wallet<c.t){alert('Saldo kurang. Top-up dulu di tab Dompet.');return}S.wallet-=c.t}
+ if(co.pts&&S.points>=50)S.points-=50;
+ const v=co.v.trim().toUpperCase();const g=S.gifts.find(x=>x.code==v&&x.mine);if(g)g.used=1;
+ const earn=Math.floor(c.t/1000);S.points+=earn;
+ S.orders.unshift({id:'DC'+Date.now().toString().slice(-6),items:S.cart.map(x=>({...x})),total:c.t,at:Date.now(),slot:['Sekarang','15 mnt','30 mnt','1 jam'][co.t],pay:PAY[co.pay],earn});
+ S.cart=[];co.v='';co.pts=false;save();closeSheet();tab='orders';render()}
+function reorder(i){S.orders[i].items.forEach(x=>S.cart.push({...x}));save();tab='menu';render();openCart()}
+function vOrders(){
+ if(!S.orders.length)return '<h1>Pesanan</h1><p class="mu">Belum ada pesanan.</p>';
+ setTimeout(()=>{if(tab=='orders'&&S.orders.some(o=>ostat(o)<2))render()},3000);
+ return `<h1>Pesanan Saya</h1>${S.orders.map((o,i)=>{const s=ostat(o);return `<div class="card"><div class="row"><b>#${o.id}</b><span class="tag">${ST[s]}</span></div>
+ <div class="bar" style="margin:8px 0"><i style="width:${(s+1)*33.4}%"></i></div>
+ <div class="mu">${o.items.map(x=>x.q+'× '+x.n).join(', ')}</div>
+ <div class="row mu"><span>${rp(o.total)} · ${o.pay} · ambil: ${o.slot}</span><span>+${o.earn} poin</span></div>
+ <button class="s" style="margin-top:8px" onclick="reorder(${i})">🔁 Pesan ulang</button></div>`}).join('')}`}
+function vWallet(){
+ const st=S.points%100;
+ return `<h1>Dompet & Loyalitas</h1>
+ <div class="ban"><div style="opacity:.85">Saldo D Coffee</div><div style="font-size:28px;font-weight:700">${rp(S.wallet)}</div><div>⭐ ${S.points} poin</div></div>
+ <h2>Top-up (bonus saldo)</h2><div class="row" style="gap:8px">${TOPUP.map(([a,b],i)=>`<button style="flex:1" class="s" onclick="topup(${i})">${rp(a)}<br><small>+bonus ${rp(b)}</small></button>`).join('')}</div>
+ <p class="mu">Demo: top-up langsung masuk. Di produksi, arahkan ke QRIS/e-wallet via payment gateway.</p>
+ <h2>Program Loyalitas</h2><div class="card"><div class="row"><span>1 poin per Rp1.000</span><span>${st}/100</span></div><div class="bar" style="margin:6px 0"><i style="width:${st}%"></i></div><div class="mu">Tukar 50 poin = diskon Rp10.000 saat checkout.</div></div>
+ <h2>🎂 Ulang Tahun</h2><div class="card"><input type="date" value="${S.bday}" onchange="S.bday=this.value;save();render()"><div class="mu" style="margin-top:6px">Isi tanggal lahir, lalu pakai kode <b>ULTAH</b> (diskon 25%) di bulan ulang tahun.</div></div>
+ <h2>☕ Langganan Kopi</h2><div class="card">${S.sub?`<b>Aktif:</b> ${S.sub.n}<div class="mu">Sampai ${new Date(S.sub.until).toLocaleDateString('id-ID')} · 1 kopi/hari, hemat ±30%</div>`:`<div class="row"><div><b>Paket Harian Rp99.000/bulan</b><div class="mu">1 kopi per hari selama 30 hari</div></div><button onclick="subs()">Langganan</button></div>`}</div>
+ <h2>🎁 Kirim Hadiah</h2><div class="card"><input id="gv" type="number" placeholder="Nominal (min 10000)" style="margin-bottom:8px"><button onclick="gift()">Buat Voucher Hadiah</button>
+ ${S.gifts.filter(g=>!g.mine).map(g=>`<div class="mu" style="margin-top:8px">Kode <b>${g.code}</b> · ${rp(g.val)} (bagikan ke teman)</div>`).join('')}
+ <div class="row" style="margin-top:8px"><input id="rc" placeholder="Punya kode hadiah?"><button onclick="redeem()">Klaim</button></div></div>`}
+function topup(i){S.wallet+=TOPUP[i][0]+TOPUP[i][1];save();render()}
+function subs(){if(S.wallet<99000){alert('Saldo kurang (Rp99.000). Top-up dulu.');return}S.wallet-=99000;S.sub={n:'Paket Harian',until:Date.now()+30*864e5};save();render()}
+function gift(){const v=+document.getElementById('gv').value;if(v<10000||v>S.wallet){alert('Nominal tidak valid / saldo kurang');return}
+ S.wallet-=v;S.gifts.push({code:'GIFT-'+Math.random().toString(36).slice(2,7).toUpperCase(),val:v,used:0,mine:0});save();render()}
+function redeem(){const c=document.getElementById('rc').value.trim().toUpperCase();const g=S.gifts.find(x=>x.code==c);
+ if(g&&!g.used){g.mine=1;g.sent=1;save();alert('Voucher diklaim. Masukkan kode di keranjang.')}else alert('Kode tidak valid')}
+function vStores(){return `<h1>Gerai Terdekat</h1>${STORES.map(s=>`<div class="card"><b>${s.n}</b><div class="mu">${s.a}</div><div class="mu">🕒 ${s.h} · ${s.w?'📶 Wi-Fi':''} · ${s.s?'🚬 Smoking area':'🚭 Non-smoking'}</div>
+ <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.n+' '+s.a)}" target="_blank" rel="noopener"><button style="margin-top:8px">🧭 Navigasi</button></a></div>`).join('')}
+ <p class="mu">Ubah daftar gerai di konstanta STORES.</p>`}
+render();
+</script><script>
+/* ===== Integrasi server (override fungsi prototipe) ===== */
+S=Object.assign({wallet:0,points:0,orders:[],cart:[],bday:'',gifts:[],sub:null},S);
+let TK=localStorage.getItem('dtk')||'',srv={bday:''},dip=null;
+const API=(p,m,b)=>fetch(p,{method:m||'GET',headers:{'Content-Type':'application/json',...(TK?{Authorization:'Bearer '+TK}:{})},body:b?JSON.stringify(b):undefined})
+ .then(async r=>{const j=await r.json().catch(()=>({}));if(r.status==401&&TK){logout();throw new Error(j.error||'Sesi habis')}if(!r.ok)throw new Error(j.error||'Gagal');return j});
+const mapO=o=>({id:o.code,items:o.items,total:o.total,at:new Date(o.created_at).getTime(),slot:o.slot,pay:o.pay,earn:o.earn,st:o.status=='baru'||o.status=='menunggu_bayar'?0:o.status=='dibuat'?1:2});
+ostat=o=>o.st;
+save=function(){try{localStorage.setItem('dcs',JSON.stringify({cart:S.cart}))}catch(e){}
+ if(TK&&S.bday!==srv.bday){srv.bday=S.bday;API('/api/me','PUT',{bday:S.bday||null}).catch(()=>{})}};
+async function sync(){const[me,od,mn]=await Promise.all([API('/api/me'),API('/api/orders'),fetch('/api/menu').then(r=>r.json())]);
+ Object.assign(S,{name:me.name,wallet:me.wallet,points:me.points,bday:me.bday||'',sub:me.sub,gifts:me.gifts,orders:od.map(mapO)});srv.bday=S.bday;
+ if(Array.isArray(mn)&&mn.length)MENU.splice(0,MENU.length,...mn.map(m=>({id:m.id,n:m.name,p:m.price,e:m.emoji,c:m.cat,f:m.food?1:undefined})));render()}
+function authUI(err,reg){document.getElementById('ov').innerHTML=`<div class="ov"><div class="sh"><h2 style="margin-top:0">☕ D Coffee Shop</h2>
+ ${reg?'<input id="an" placeholder="Nama" style="margin-bottom:8px">':''}<input id="ap" placeholder="No. HP (08...)" inputmode="numeric" style="margin-bottom:8px">
+ <input id="aw" type="password" placeholder="Password (min 6)" style="margin-bottom:8px">${err?`<p style="color:#c0392b">${err}</p>`:''}
+ <button style="width:100%" onclick="doAuth(${!!reg})">${reg?'Daftar':'Masuk'}</button>
+ <p class="mu" onclick="authUI('',${!reg})" style="cursor:pointer;text-align:center">${reg?'Sudah punya akun? Masuk':'Belum punya akun? Daftar'}</p></div></div>`}
+async function doAuth(reg){try{const j=await API('/api/auth/'+(reg?'register':'login'),'POST',{name:reg?document.getElementById('an').value:undefined,phone:document.getElementById('ap').value,password:document.getElementById('aw').value});
+ TK=j.token;localStorage.setItem('dtk',TK);closeSheet();await sync()}catch(e){authUI(e.message,reg)}}
+function logout(){TK='';localStorage.removeItem('dtk');S.orders=[];S.wallet=0;S.points=0;S.gifts=[];S.sub=null;authUI()}
+const act=(p,b,ok)=>API(p,'POST',b).then(async j=>{if(j.redirect_url){location.href=j.redirect_url;return}await sync();if(ok)alert(ok)}).catch(e=>alert(e.message));
+topup=i=>act('/api/topup',{idx:i});
+subs=()=>act('/api/subscribe',{});
+gift=()=>act('/api/gift',{val:+document.getElementById('gv').value});
+redeem=()=>act('/api/gift/claim',{code:document.getElementById('rc').value},'Voucher diklaim. Masukkan kode di keranjang.');
+pay=async function(){try{const j=await API('/api/orders','POST',{items:S.cart.map(x=>({id:x.id,q:x.q,o:x.o})),slot:['Sekarang','15 mnt','30 mnt','1 jam'][co.t],pay:PAY[co.pay],voucher:co.v,usePoints:co.pts});
+ S.cart=[];co.v='';co.pts=false;save();closeSheet();if(j.redirect_url){location.href=j.redirect_url;return}await sync();tab='orders';render()}catch(e){alert(e.message)}};
+const _vW=vWallet;vWallet=()=>_vW()+`<p class="mu" style="margin-top:18px">Masuk sebagai ${S.name||''}</p><button class="s" onclick="logout()">Keluar</button>`;
+setInterval(()=>{if(TK&&tab=='orders')API('/api/orders').then(od=>{S.orders=od.map(mapO);render()}).catch(()=>{})},5000);
+/* PWA */
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();dip=e;const b=document.createElement('button');b.textContent='⬇️ Install aplikasi';b.className='fab';b.style.left='14px';b.style.right='auto';
+ b.onclick=()=>{dip.prompt();b.remove()};document.body.appendChild(b)});
+TK?sync().catch(()=>{}):authUI();
+
+</script></body></html>

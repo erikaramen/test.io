@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>D Coffee - Admin</title>
+<style>
+:root{--bg:#faf6f1;--card:#fff;--tx:#2b1d14;--mu:#7a6a5d;--ac:#8b4f2a;--bd:#e8ddd2}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1410;--card:#261d17;--tx:#f3e9df;--mu:#a8978a;--ac:#d9955e;--bd:#3a2e25}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px system-ui,sans-serif;padding:14px;max-width:980px;margin:auto}
+h1{font-size:20px;margin:0}h2{font-size:16px;margin:20px 0 8px}.top{display:flex;justify-content:space-between;align-items:center}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}.big{font-size:22px;font-weight:700}
+button{font:inherit;border:0;border-radius:8px;padding:8px 12px;background:var(--ac);color:#fff;cursor:pointer}button.s{background:var(--bd);color:var(--tx)}
+input,select{font:inherit;padding:7px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);width:100%}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:640px}td,th{padding:4px;text-align:left;border-bottom:1px solid var(--bd)}
+.mu{color:var(--mu)}.box{max-width:340px;margin:12vh auto}.box input{margin-bottom:8px}
+</style></head><body><div id="app"></div>
+<script>
+let TK=localStorage.getItem('atk')||'',M=[];
+const rp=n=>'Rp'+Math.round(n).toLocaleString('id-ID');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(p,m,b){const r=await fetch(p,{method:m||'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+TK},body:b?JSON.stringify(b):undefined});
+ const j=await r.json().catch(()=>({}));if(r.status==401||r.status==403){logout();throw new Error(j.error)}if(!r.ok)throw new Error(j.error||'Gagal');return j}
+function loginUI(e){document.getElementById('app').innerHTML=`<div class="box card"><h1>🔐 Admin D Coffee</h1><p class="mu">Khusus pemilik</p>
+ <input id="p" placeholder="No. HP admin" inputmode="numeric"><input id="w" type="password" placeholder="Password">${e?`<p style="color:#c0392b">${esc(e)}</p>`:''}<button style="width:100%" onclick="login()">Masuk</button></div>`}
+async function login(){try{const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:p.value,password:w.value})});
+ const j=await r.json();if(!r.ok)throw new Error(j.error);if(j.role!='admin')throw new Error('Bukan akun admin');TK=j.token;localStorage.setItem('atk',TK);load()}catch(e){loginUI(e.message)}}
+function logout(){TK='';localStorage.removeItem('atk');loginUI()}
+const row=m=>`<tr data-id="${m.id}"><td><input class="e" value="${esc(m.emoji)}" style="width:54px"></td><td><input class="n" value="${esc(m.name)}"></td>
+ <td><input class="p" type="number" value="${m.price}" style="width:100px"></td><td><input class="c" value="${esc(m.cat)}" style="width:100px"></td>
+ <td><input class="f" type="checkbox" ${m.food?'checked':''} style="width:auto"></td><td><input class="a" type="checkbox" ${m.active?'checked':''} style="width:auto"></td>
+ <td><button onclick="saveRow(${m.id},this)">Simpan</button></td></tr>`;
+function body(tr){const g=c=>tr.querySelector(c);return{emoji:g('.e').value,name:g('.n').value,price:g('.p').value,cat:g('.c').value,food:g('.f').checked,active:g('.a').checked}}
+async function saveRow(id,b){try{await api('/api/admin/menu/'+id,'PUT',body(b.closest('tr')));b.textContent='✓ Tersimpan';setTimeout(()=>b.textContent='Simpan',1200)}catch(e){alert(e.message)}}
+async function addRow(){try{await api('/api/admin/menu','POST',body(document.getElementById('new')));load()}catch(e){alert(e.message)}}
+async function load(){try{const[st,m]=await Promise.all([api('/api/admin/stats'),api('/api/admin/menu')]);
+ const today=new Date(Date.now()+7*36e5).toISOString().slice(0,10),t=st.days.find(d=>d.d==today)||{n:0,rev:0};
+ const wk=st.days.reduce((a,d)=>a+d.rev,0);
+ document.getElementById('app').innerHTML=`<div class="top"><h1>☕ Admin D Coffee</h1><button class="s" onclick="logout()">Keluar</button></div>
+ <h2>Ringkasan</h2><div class="g"><div class="card"><div class="mu">Pesanan hari ini</div><div class="big">${t.n}</div></div>
+ <div class="card"><div class="mu">Omzet hari ini</div><div class="big">${rp(t.rev)}</div></div>
+ <div class="card"><div class="mu">Omzet 7 hari</div><div class="big">${rp(wk)}</div></div><div class="card"><div class="mu">Pelanggan terdaftar</div><div class="big">${st.cust}</div></div></div>
+ <div class="g"><div class="card"><b>Per hari</b>${st.days.map(d=>`<div class="mu">${d.d}: ${d.n} pesanan · ${rp(d.rev)}</div>`).join('')||'<div class="mu">Belum ada data</div>'}</div>
+ <div class="card"><b>Menu terlaris (7 hari)</b>${st.top.map(x=>`<div class="mu">${esc(x.name)}: ${x.qty}</div>`).join('')||'<div class="mu">Belum ada data</div>'}</div></div>
+ <h2>Kelola Menu</h2><div class="card tw"><table><tr><th>Ikon</th><th>Nama</th><th>Harga</th><th>Kategori</th><th>Makanan</th><th>Aktif</th><th></th></tr>${m.map(row).join('')}</table></div>
+ <h2>Tambah Menu Baru</h2><div class="card tw"><table><tbody id="new"><tr><td><input class="e" value="☕" style="width:54px"></td><td><input class="n" placeholder="Nama"></td><td><input class="p" type="number" placeholder="Harga" style="width:100px"></td><td><input class="c" value="Kopi" style="width:100px"></td>
+ <td><input class="f" type="checkbox" style="width:auto"></td><td><input class="a" type="checkbox" checked style="width:auto"></td><td><button onclick="addRow()">Tambah</button></td></tr></tbody></table></div>
+ <p class="mu">Perubahan tampil di aplikasi pelanggan saat aplikasi dibuka/disegarkan. Nonaktifkan menu (hapus centang Aktif) untuk menyembunyikan tanpa menghapus riwayat.</p>`}catch(e){}}
+TK?load():loginUI();
+</script></body></html>
